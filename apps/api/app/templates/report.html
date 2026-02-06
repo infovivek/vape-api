@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Authorized API VAPT Report</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; }
+    .summary { background: #f7f7f7; padding: 16px; border-radius: 8px; }
+    .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+    .critical { background: #b91c1c; color: white; }
+    .high { background: #dc2626; color: white; }
+    .medium { background: #f97316; color: white; }
+    .low { background: #0ea5e9; color: white; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>Authorized API VAPT Report</h1>
+  <div class="summary">
+    <p><strong>Target:</strong> {{ target.name }} ({{ target.base_url }})</p>
+    <p><strong>Scan status:</strong> {{ scan.status }}</p>
+    <p><strong>Generated:</strong> {{ generated_at }}</p>
+    <p><strong>Stop reason:</strong> {{ metadata.stop_reason or 'None' }}</p>
+  </div>
+
+  <h2>Executive Summary</h2>
+  <p>This report is generated for authorized testing only. The authorization record is stored with this scan.</p>
+  <p><strong>Authorization:</strong> {{ authorization.authorization_text or 'Owner attestation' }}</p>
+  <p><strong>Owner attestation:</strong> {{ 'Yes' if authorization.owner_attestation else 'No' }}</p>
+
+  <h2>Risk Dashboard</h2>
+  {% set severities = {'Critical':0,'High':0,'Medium':0,'Low':0} %}
+  {% for finding in findings %}
+    {% set _ = severities.update({finding.severity: severities.get(finding.severity, 0) + 1}) %}
+  {% endfor %}
+  <ul>
+    <li>Critical: {{ severities['Critical'] }}</li>
+    <li>High: {{ severities['High'] }}</li>
+    <li>Medium: {{ severities['Medium'] }}</li>
+    <li>Low: {{ severities['Low'] }}</li>
+  </ul>
+
+  <h2>Findings</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Severity</th>
+        <th>Confidence</th>
+        <th>Mappings</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for finding in findings %}
+      <tr>
+        <td>{{ finding.title }}</td>
+        <td><span class="badge {{ finding.severity|lower }}">{{ finding.severity }}</span></td>
+        <td>{{ finding.confidence }}</td>
+        <td>{{ finding.owasp_mapping }} | {{ finding.asvs_mapping }} | {{ finding.iso_mapping }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Detailed Evidence</h2>
+  {% for finding in findings %}
+    <h3>{{ finding.title }}</h3>
+    <p><strong>Evidence:</strong> {{ finding.evidence }}</p>
+    <p><strong>Reproduction:</strong> {{ finding.reproduction_steps }}</p>
+    <p><strong>Fix guidance:</strong> {{ finding.remediation }}</p>
+  {% endfor %}
+
+  <h2>Appendix</h2>
+  <p>Configuration: allowlisted hosts {{ target.allowlisted_hosts }}</p>
+  <p>Rate-limit observations: {{ metadata.latencies }}</p>
+</body>
+</html>
