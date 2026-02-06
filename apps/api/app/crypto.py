@@ -6,8 +6,7 @@ from .settings import settings
 
 def _get_fernet() -> Fernet:
     if not settings.encryption_key:
-        key = Fernet.generate_key()
-        settings.encryption_key = base64.urlsafe_b64encode(base64.urlsafe_b64decode(key)).decode()
+        raise RuntimeError("VAPT_ENCRYPTION_KEY must be set")
     return Fernet(settings.encryption_key.encode())
 
 

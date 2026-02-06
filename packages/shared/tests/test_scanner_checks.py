@@ -13,7 +13,7 @@ def _make_scanner():
         config=TargetConfig(
             base_url="https://api.example.com",
             allowlisted_hosts=["api.example.com"],
-            pii_regexes=[r"\\b\\d{3}-\\d{2}-\\d{4}\\b"],
+            pii_regexes=[r"\b\d{3}-\d{2}-\d{4}\b"],
         ),
     )
     return Scanner(context)

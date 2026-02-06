@@ -12,19 +12,39 @@ Authorized API VAPT Scanner is a safety-first web application for ethical API te
 cp .env.example .env
 ```
 
-2. Start the stack:
+2. Generate an encryption key (required for API key storage):
+
+```bash
+python scripts/generate_key.py
+```
+
+3. Paste the generated key into `.env` as `VAPT_ENCRYPTION_KEY`.
+
+4. Start the stack:
 
 ```bash
 docker compose up --build
 ```
 
-3. Open the UI at `http://localhost:5173`.
-
-### Migrations
+5. Run migrations:
 
 ```bash
 docker compose exec api alembic -c apps/api/alembic.ini upgrade head
 ```
+
+6. Open the UI at `http://localhost:5173`.
+
+## Using the app (step-by-step)
+
+1. Register a tenant admin account from the UI (Register section).
+2. Create a project name under “Projects.”
+3. Add a target:
+   - Base URL (must match allowlisted host)
+   - Allowlisted hosts (comma-separated)
+   - Optional API key header/name
+   - Authorization text or owner attestation
+4. Start a scan from the target list.
+5. Enter the scan ID in “Download Report” to view the HTML report.
 
 ## Safe-use policy
 
