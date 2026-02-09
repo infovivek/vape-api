@@ -24,6 +24,26 @@ export default function App() {
   const [apiKeys, setApiKeys] = useState([])
   const [apiKeyName, setApiKeyName] = useState('')
   const [newApiKey, setNewApiKey] = useState('')
+  const [activeFeature, setActiveFeature] = useState(0)
+
+  const features = [
+    {
+      title: 'Proof-of-authorization scanning',
+      description: 'Require owner attestation or written authorization before any scan runs.'
+    },
+    {
+      title: 'Safe, bounded checks',
+      description: 'No DoS, no brute force, capped rate-limit validation with automatic backoff.'
+    },
+    {
+      title: 'Actionable HTML reports',
+      description: 'Executive summary, OWASP mappings, redacted evidence, and safe repro steps.'
+    },
+    {
+      title: 'Multi-tenant projects',
+      description: 'Separate projects, targets, and results per tenant with RBAC controls.'
+    }
+  ]
 
   const authHeaders = token ? { Authorization: `Bearer ${token}` } : {}
 
@@ -126,10 +146,68 @@ export default function App() {
 
   return (
     <div className="min-h-screen p-8">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold">Authorized API VAPT Scanner</h1>
-        <p className="text-slate-300">Use only on assets you own or have written permission to test.</p>
+      <header className="mb-12 rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-rose-500 p-10 text-white shadow-xl">
+        <div className="max-w-4xl">
+          <p className="uppercase tracking-[0.3em] text-xs font-semibold text-indigo-100">Authorized API VAPT Scanner</p>
+          <h1 className="mt-4 text-4xl font-bold md:text-5xl">Ethical, safe API security testing for the systems you own.</h1>
+          <p className="mt-4 text-lg text-indigo-100">
+            Run scoped scans, generate evidence-backed reports, and keep results accessible for 7 days. All data stays in the
+            database for audit retention.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <span className="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold">Free signup</span>
+            <span className="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold">Safe rate-limits</span>
+            <span className="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold">HTML reports</span>
+          </div>
+        </div>
       </header>
+
+      <section className="mb-10 grid gap-6 md:grid-cols-2">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+          <h2 className="text-2xl font-semibold">What you can do</h2>
+          <p className="mt-3 text-slate-300">
+            Upload OpenAPI or Postman specs, enforce allowlists, and run safe checks for auth, validation, and data exposure.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-2">
+            {features.map((feature, index) => (
+              <button
+                key={feature.title}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  activeFeature === index ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-200'
+                }`}
+                onClick={() => setActiveFeature(index)}
+              >
+                {feature.title}
+              </button>
+            ))}
+          </div>
+          <div className="mt-6 rounded-xl bg-slate-800 p-4">
+            <p className="text-lg font-semibold">{features[activeFeature].title}</p>
+            <p className="mt-2 text-slate-300">{features[activeFeature].description}</p>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+          <h2 className="text-2xl font-semibold">How it works</h2>
+          <ol className="mt-4 space-y-3 text-slate-300">
+            <li className="flex gap-3">
+              <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" />
+              Create a project, add allowlisted targets, and confirm authorization.
+            </li>
+            <li className="flex gap-3">
+              <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" />
+              Start a scan and monitor safe, bounded checks.
+            </li>
+            <li className="flex gap-3">
+              <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" />
+              Review the HTML report, exported evidence, and fix guidance.
+            </li>
+          </ol>
+          <div className="mt-6 rounded-xl bg-slate-800 p-4 text-sm text-slate-300">
+            Results remain visible for <span className="font-semibold text-white">7 days</span>, then expire from user access while
+            staying in the database for audit and compliance needs.
+          </div>
+        </div>
+      </section>
 
       <section className="grid gap-6 md:grid-cols-2">
         <div className="bg-slate-900 p-6 rounded-lg">

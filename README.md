@@ -57,6 +57,7 @@ docker compose exec api alembic -c apps/api/alembic.ini upgrade head
 4. Start a scan from the target list.
 5. Enter the scan ID in “Download Report” to view the HTML report.
 6. (Optional) Generate an API key from the “API Keys” section for programmatic access.
+7. Scan results remain visible for 7 days in the UI and API; historical data is retained in the database for audit needs.
 
 ## Safe-use policy
 

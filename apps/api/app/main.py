@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 from uuid import UUID
 
@@ -38,6 +38,8 @@ from .settings import settings
 from .tasks import run_scan
 
 app = FastAPI(title="Authorized API VAPT Scanner")
+
+RETENTION_DAYS = 7
 
 app.add_middleware(
     CORSMiddleware,
@@ -231,11 +233,12 @@ async def create_scan(
 
 @app.get("/scans", response_model=list[ScanResponse])
 def list_scans(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    cutoff = datetime.utcnow() - timedelta(days=RETENTION_DAYS)
     return (
         db.query(Scan)
         .join(Target, Scan.target_id == Target.id)
         .join(Project, Target.project_id == Project.id)
-        .filter(Project.tenant_id == user.tenant_id)
+        .filter(Project.tenant_id == user.tenant_id, Scan.created_at >= cutoff)
         .all()
     )
 
@@ -245,6 +248,8 @@ def download_report(scan_id: UUID, user: User = Depends(get_current_user), db: S
     scan = db.query(Scan).filter(Scan.id == scan_id).first()
     if not scan or not scan.report_html:
         raise HTTPException(status_code=404, detail="Report not found")
+    if scan.created_at and scan.created_at < datetime.utcnow() - timedelta(days=RETENTION_DAYS):
+        raise HTTPException(status_code=410, detail="Report expired")
     return {"report_html": scan.report_html}
 
 
