@@ -28,6 +28,20 @@ class User(Base):
     tenant = relationship("Tenant")
 
 
+class ApiKey(Base):
+    __tablename__ = "api_keys"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    name = Column(String(200), nullable=False)
+    prefix = Column(String(12), nullable=False)
+    hashed_key = Column(String(64), nullable=False, unique=True)
+    last_used_at = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    tenant = relationship("Tenant")
+    user = relationship("User")
+
+
 class Project(Base):
     __tablename__ = "projects"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

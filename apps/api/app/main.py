@@ -9,11 +9,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from .audit import log_action
-from .auth import create_access_token, get_current_user, hash_password, require_role, verify_password
+from .auth import (
+    create_access_token,
+    generate_api_key,
+    get_current_user,
+    hash_api_key,
+    hash_password,
+    require_role,
+    verify_password,
+)
 from .crypto import encrypt_value
 from .db import get_db
-from .models import AuthorizationRecord, Project, Scan, Target, Tenant, User
+from .models import ApiKey, AuthorizationRecord, Project, Scan, Target, Tenant, User
 from .schemas import (
+    ApiKeyCreate,
+    ApiKeyCreated,
+    ApiKeyResponse,
     ProjectCreate,
     ProjectResponse,
     ScanResponse,
@@ -30,11 +41,9 @@ app = FastAPI(title="Authorized API VAPT Scanner")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"]
-    if settings.jwt_secret == "change-me"
-    else ["http://localhost:5173"],
+    allow_origins=[origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()],
     allow_credentials=True,
-    allow_methods=["*"] ,
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -64,6 +73,55 @@ def login(payload: UserLogin, db: Session = Depends(get_db)):
     log_action(db, user.tenant_id, user.id, "login", {})
     return TokenResponse(access_token=token)
 
+
+@app.post("/auth/api-keys", response_model=ApiKeyCreated)
+def create_api_key(
+    payload: ApiKeyCreate,
+    user: User = Depends(require_role("TenantAdmin", "Analyst", "SuperAdmin")),
+    db: Session = Depends(get_db),
+):
+    if not settings.api_key_salt:
+        raise HTTPException(status_code=500, detail="API key salt not configured")
+    raw_key = generate_api_key()
+    api_key = ApiKey(
+        tenant_id=user.tenant_id,
+        user_id=user.id,
+        name=payload.name,
+        prefix=raw_key[:8],
+        hashed_key=hash_api_key(raw_key),
+    )
+    db.add(api_key)
+    db.commit()
+    db.refresh(api_key)
+    log_action(db, user.tenant_id, user.id, "api_key_created", {"api_key_id": str(api_key.id)})
+    return ApiKeyCreated(
+        id=api_key.id,
+        name=api_key.name,
+        prefix=api_key.prefix,
+        created_at=api_key.created_at,
+        last_used_at=api_key.last_used_at,
+        api_key=raw_key,
+    )
+
+
+@app.get("/auth/api-keys", response_model=list[ApiKeyResponse])
+def list_api_keys(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return db.query(ApiKey).filter(ApiKey.user_id == user.id).all()
+
+
+@app.delete("/auth/api-keys/{api_key_id}")
+def revoke_api_key(
+    api_key_id: UUID,
+    user: User = Depends(require_role("TenantAdmin", "Analyst", "SuperAdmin")),
+    db: Session = Depends(get_db),
+):
+    api_key = db.query(ApiKey).filter(ApiKey.id == api_key_id, ApiKey.user_id == user.id).first()
+    if not api_key:
+        raise HTTPException(status_code=404, detail="API key not found")
+    db.delete(api_key)
+    db.commit()
+    log_action(db, user.tenant_id, user.id, "api_key_revoked", {"api_key_id": str(api_key_id)})
+    return {"status": "revoked"}
 
 @app.post("/auth/mfa/setup")
 def setup_mfa(user: User = Depends(get_current_user), db: Session = Depends(get_db)):

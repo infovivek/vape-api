@@ -22,6 +22,25 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class ApiKeyCreate(BaseModel):
+    name: str
+
+
+class ApiKeyResponse(BaseModel):
+    id: UUID
+    name: str
+    prefix: str
+    created_at: datetime
+    last_used_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ApiKeyCreated(ApiKeyResponse):
+    api_key: str
+
+
 class ProjectCreate(BaseModel):
     name: str
 

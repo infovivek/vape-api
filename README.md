@@ -20,19 +20,30 @@ python scripts/generate_key.py
 
 3. Paste the generated key into `.env` as `VAPT_ENCRYPTION_KEY`.
 
-4. Start the stack:
+4. Generate an API key salt (required for SaaS API keys):
+
+```bash
+python - <<'PY'
+import secrets
+print(secrets.token_urlsafe(32))
+PY
+```
+
+5. Paste the generated value into `.env` as `VAPT_API_KEY_SALT`.
+
+6. Start the stack:
 
 ```bash
 docker compose up --build
 ```
 
-5. Run migrations:
+7. Run migrations:
 
 ```bash
 docker compose exec api alembic -c apps/api/alembic.ini upgrade head
 ```
 
-6. Open the UI at `http://localhost:5173`.
+8. Open the UI at `http://localhost:5173`.
 
 ## Using the app (step-by-step)
 
@@ -45,6 +56,7 @@ docker compose exec api alembic -c apps/api/alembic.ini upgrade head
    - Authorization text or owner attestation
 4. Start a scan from the target list.
 5. Enter the scan ID in “Download Report” to view the HTML report.
+6. (Optional) Generate an API key from the “API Keys” section for programmatic access.
 
 ## Safe-use policy
 
@@ -74,3 +86,45 @@ python scripts/demo_run.py
 ```
 
 The demo uses the sample OpenAPI/Postman files under `samples/` and generates `demo-report.html`.
+
+## AWS SaaS deployment guide (recommended baseline)
+
+This application is ready to run as a multi-tenant SaaS. Users can self-register, generate an API key, and launch scans from the UI.
+
+### Architecture (production-friendly)
+
+- **Web**: S3 + CloudFront (static build from `apps/web`)
+- **API**: ECS Fargate service behind an ALB
+- **Worker**: ECS Fargate service (no public ingress)
+- **Database**: Amazon RDS for PostgreSQL
+- **Queue/Cache**: Amazon ElastiCache for Redis
+- **Secrets**: AWS Secrets Manager or SSM Parameter Store
+- **Logs**: CloudWatch Logs
+
+### Step-by-step AWS setup (high level)
+
+1. **Provision data stores**
+   - Create an RDS Postgres instance.
+   - Create an ElastiCache Redis cluster.
+2. **Create secrets**
+   - `VAPT_JWT_SECRET`, `VAPT_ENCRYPTION_KEY`, `VAPT_API_KEY_SALT` must be generated and stored securely.
+3. **Build and push images**
+   - Build `apps/api` and `apps/worker` Docker images.
+   - Push to ECR repositories.
+4. **Create ECS services**
+   - **API service** with an ALB listener (port 8000).
+   - **Worker service** without public access.
+5. **Configure environment variables**
+   - Use the same env values as `.env.example`, plus production endpoints for Postgres/Redis and the correct `VAPT_CORS_ORIGINS` value for your web domain.
+6. **Run migrations**
+   - Run `alembic upgrade head` against the RDS database.
+7. **Deploy the web UI**
+   - Build `apps/web` using `VITE_API_BASE` pointing at the ALB.
+   - Upload the build output to S3 and serve through CloudFront.
+
+### Free signup + API keys
+
+- Users can **register from the UI** and immediately access their tenant.
+- From “API Keys,” they can **generate an API key** for programmatic access.
+- API keys are **hashed at rest** and displayed only once on creation.
+- For API access, send the key in the `X-API-Key` header.

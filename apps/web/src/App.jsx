@@ -21,6 +21,9 @@ export default function App() {
   const [targets, setTargets] = useState([])
   const [scanStatus, setScanStatus] = useState('')
   const [report, setReport] = useState('')
+  const [apiKeys, setApiKeys] = useState([])
+  const [apiKeyName, setApiKeyName] = useState('')
+  const [newApiKey, setNewApiKey] = useState('')
 
   const authHeaders = token ? { Authorization: `Bearer ${token}` } : {}
 
@@ -93,6 +96,32 @@ export default function App() {
     const res = await fetch(`${API_BASE}/scans/${scanId}/report`, { headers: authHeaders })
     const data = await res.json()
     setReport(data.report_html || '')
+  }
+
+  const loadApiKeys = async () => {
+    const res = await fetch(`${API_BASE}/auth/api-keys`, { headers: authHeaders })
+    const data = await res.json()
+    setApiKeys(data)
+  }
+
+  const createApiKey = async () => {
+    const res = await fetch(`${API_BASE}/auth/api-keys`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify({ name: apiKeyName })
+    })
+    const data = await res.json()
+    setNewApiKey(data.api_key || '')
+    setApiKeyName('')
+    loadApiKeys()
+  }
+
+  const revokeApiKey = async (apiKeyId) => {
+    await fetch(`${API_BASE}/auth/api-keys/${apiKeyId}`, {
+      method: 'DELETE',
+      headers: authHeaders
+    })
+    loadApiKeys()
   }
 
   return (
@@ -169,6 +198,33 @@ export default function App() {
         {report && (
           <div className="mt-4 bg-white text-black p-4 rounded" dangerouslySetInnerHTML={{ __html: report }} />
         )}
+      </section>
+
+      <section className="mt-8 bg-slate-900 p-6 rounded-lg">
+        <h2 className="text-xl font-semibold mb-4">API Keys</h2>
+        <p className="text-slate-300 mb-4">Generate a key for programmatic access. Keys are shown only once.</p>
+        <div className="flex gap-3">
+          <input className="flex-1 p-2 rounded bg-slate-800" placeholder="Key name" value={apiKeyName} onChange={(e) => setApiKeyName(e.target.value)} />
+          <button className="bg-indigo-500 px-4 py-2 rounded" onClick={createApiKey}>Generate</button>
+          <button className="bg-slate-700 px-4 py-2 rounded" onClick={loadApiKeys}>Refresh</button>
+        </div>
+        {newApiKey && (
+          <div className="mt-4 bg-emerald-900 text-emerald-100 p-3 rounded">
+            <p className="font-semibold">Your new API key:</p>
+            <code className="break-all">{newApiKey}</code>
+          </div>
+        )}
+        <ul className="mt-4 space-y-2">
+          {apiKeys.map((key) => (
+            <li key={key.id} className="bg-slate-800 p-3 rounded flex justify-between items-center">
+              <div>
+                <p className="font-semibold">{key.name}</p>
+                <p className="text-slate-400 text-sm">Prefix: {key.prefix}</p>
+              </div>
+              <button className="bg-rose-500 px-3 py-1 rounded" onClick={() => revokeApiKey(key.id)}>Revoke</button>
+            </li>
+          ))}
+        </ul>
       </section>
     </div>
   )

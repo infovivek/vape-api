@@ -7,9 +7,11 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_exp_minutes: int = 60
     encryption_key: str = ""  # base64 fernet key
+    api_key_salt: str = ""
     redis_url: str = "redis://redis:6379/0"
     celery_broker_url: str = "redis://redis:6379/0"
     celery_result_backend: str = "redis://redis:6379/0"
+    cors_origins: str = "http://localhost:5173"
 
     class Config:
         env_prefix = "VAPT_"
